@@ -74,6 +74,8 @@ public:
 	void control_allowed(std::string service_uri, JausAddress component, unsigned char authority);
 	void enable_monitoring_only(std::string service_uri, JausAddress component);
 	void access_deactivated(std::string service_uri, JausAddress component);
+	void create_events(std::string service_uri, JausAddress component, bool by_query=false);
+	void cancel_events(std::string service_uri, JausAddress component, bool by_query=false);
 	/// Guard Methods
 
 	StabilizerDriverClient_ReceiveFSMContext *context;
@@ -86,22 +88,28 @@ protected:
 	urn_jaus_jss_core_AccessControlClient::AccessControlClient_ReceiveFSM* pAccessControlClient_ReceiveFSM;
 	urn_jaus_jss_core_ManagementClient::ManagementClient_ReceiveFSM* pManagementClient_ReceiveFSM;
 
-	JausAddress p_control_addr;
+	JausAddress p_remote_addr;
+	bool p_has_access;
 	ros::NodeHandle p_nh;
 	ros::NodeHandle p_pnh;
+	ros::Timer p_query_timer;
 	ros::Subscriber p_sub_jointstates;
 	ros::Subscriber p_sub_cmd_vel;
 	ros::Publisher p_pub_jointstates;
 	QueryStabilizerPosition p_query_position;
+	QueryStabilizerEffort p_query_effort;
 	std::vector<std::string> p_names;
 	std::map<unsigned char, std::string> p_stabilizer;
 	std::map<unsigned char, float> p_efforts;
 	std::map<unsigned char, float> p_positions;
+	bool p_by_query;
+	bool p_valid_capabilities;
 
 	void pRosCmdJointState(const sensor_msgs::JointState::ConstPtr& joint_state);
 	void pRosCmdVelocity(const std_msgs::Float64MultiArray::ConstPtr& cmd_vel);
 	void pHandlePositionEvent(JausAddress &sender, unsigned int reportlen, const unsigned char* reportdata);
 	int getNameIndexFromJointState(const sensor_msgs::JointState::ConstPtr& joint_state, std::string name);
+	void pQueryCallback(const ros::TimerEvent& event);
 
 };
 
