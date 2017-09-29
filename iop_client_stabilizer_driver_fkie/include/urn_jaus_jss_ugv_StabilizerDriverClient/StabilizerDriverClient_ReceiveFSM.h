@@ -50,12 +50,13 @@ along with this program; or you can read the full license at
 #include <std_msgs/Float64MultiArray.h>
 
 #include <iop_ocu_slavelib_fkie/SlaveHandlerInterface.h>
+#include <iop_events_fkie/EventHandlerInterface.h>
 
 
 namespace urn_jaus_jss_ugv_StabilizerDriverClient
 {
 
-class DllExport StabilizerDriverClient_ReceiveFSM : public JTS::StateMachine, public iop::ocu::SlaveHandlerInterface
+class DllExport StabilizerDriverClient_ReceiveFSM : public JTS::StateMachine, public iop::ocu::SlaveHandlerInterface, public iop::EventHandlerInterface
 {
 public:
 	StabilizerDriverClient_ReceiveFSM(urn_jaus_jss_core_Transport::Transport_ReceiveFSM* pTransport_ReceiveFSM, urn_jaus_jss_core_EventsClient::EventsClient_ReceiveFSM* pEventsClient_ReceiveFSM, urn_jaus_jss_core_AccessControlClient::AccessControlClient_ReceiveFSM* pAccessControlClient_ReceiveFSM, urn_jaus_jss_core_ManagementClient::ManagementClient_ReceiveFSM* pManagementClient_ReceiveFSM);
@@ -69,6 +70,8 @@ public:
 	virtual void reportStabilizerEffortAction(ReportStabilizerEffort msg, Receive::Body::ReceiveRec transportData);
 	virtual void reportStabilizerPositionAction(ReportStabilizerPosition msg, Receive::Body::ReceiveRec transportData);
 
+	/// EventHandlerInterface Methods
+	void event(JausAddress reporter, unsigned short query_msg_id, unsigned int reportlen, const unsigned char* reportdata);
 
 	/// SlaveHandlerInterface Methods
 	void control_allowed(std::string service_uri, JausAddress component, unsigned char authority);
@@ -107,7 +110,6 @@ protected:
 
 	void pRosCmdJointState(const sensor_msgs::JointState::ConstPtr& joint_state);
 	void pRosCmdVelocity(const std_msgs::Float64MultiArray::ConstPtr& cmd_vel);
-	void pHandlePositionEvent(JausAddress &sender, unsigned int reportlen, const unsigned char* reportdata);
 	int getNameIndexFromJointState(const sensor_msgs::JointState::ConstPtr& joint_state, std::string name);
 	void pQueryCallback(const ros::TimerEvent& event);
 

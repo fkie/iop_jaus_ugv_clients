@@ -133,7 +133,7 @@ void StabilizerDriverClient_ReceiveFSM::cancel_events(std::string service_uri, J
 	if (!by_query) {
 		ROS_INFO_NAMED("StabilizerDriverClient", "cancel EVENT for stabilizer position by %d.%d.%d",
 				component.getSubsystemID(), component.getNodeID(), component.getComponentID());
-		pEventsClient_ReceiveFSM->cancel_event(component, p_query_position);
+		pEventsClient_ReceiveFSM->cancel_event(*this, component, p_query_position);
 	}
 	p_valid_capabilities = false;
 	p_stabilizer.clear();
@@ -211,7 +211,7 @@ void StabilizerDriverClient_ReceiveFSM::reportStabilizerCapabilitiesAction(Repor
 		} else {
 			ROS_INFO_NAMED("StabilizerDriverClient", "create EVENT to get stabilizer position from %d.%d.%d",
 					p_remote_addr.getSubsystemID(), p_remote_addr.getNodeID(), p_remote_addr.getComponentID());
-			pEventsClient_ReceiveFSM->create_event(&StabilizerDriverClient_ReceiveFSM::pHandlePositionEvent, this, p_remote_addr, p_query_position, 10.0, 0);
+			pEventsClient_ReceiveFSM->create_event(*this, p_remote_addr, p_query_position, 10.0, 0);
 		}
 	}
 }
@@ -326,7 +326,7 @@ void StabilizerDriverClient_ReceiveFSM::pRosCmdVelocity(const std_msgs::Float64M
 	}
 }
 
-void StabilizerDriverClient_ReceiveFSM::pHandlePositionEvent(JausAddress &sender, unsigned int reportlen, const unsigned char* reportdata)
+void StabilizerDriverClient_ReceiveFSM::event(JausAddress sender, unsigned short query_msg_id, unsigned int reportlen, const unsigned char* reportdata)
 {
 	ReportStabilizerPosition report;
 	report.decode(reportdata);
