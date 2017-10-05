@@ -94,7 +94,6 @@ protected:
 	JausAddress p_remote_addr;
 	bool p_has_access;
 	ros::NodeHandle p_nh;
-	ros::NodeHandle p_pnh;
 	ros::Timer p_query_timer;
 	ros::Subscriber p_sub_jointstates;
 	ros::Subscriber p_sub_cmd_vel;

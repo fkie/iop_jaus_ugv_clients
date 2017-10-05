@@ -21,6 +21,7 @@ along with this program; or you can read the full license at
 /** \author Alexander Tiderko */
 
 #include <iop_ocu_slavelib_fkie/Slave.h>
+#include <iop_component_fkie/iop_config.h>
 
 #include "urn_jaus_jss_ugv_StabilizerDriverClient/StabilizerDriverClient_ReceiveFSM.h"
 
@@ -57,7 +58,6 @@ StabilizerDriverClient_ReceiveFSM::StabilizerDriverClient_ReceiveFSM(urn_jaus_js
 	this->pAccessControlClient_ReceiveFSM = pAccessControlClient_ReceiveFSM;
 	this->pManagementClient_ReceiveFSM = pManagementClient_ReceiveFSM;
 	p_has_access = false;
-	p_pnh = ros::NodeHandle("~");
 	p_by_query = false;
 	p_valid_capabilities = false;
 
@@ -76,23 +76,21 @@ void StabilizerDriverClient_ReceiveFSM::setupNotifications()
 	pManagementClient_ReceiveFSM->registerNotification("Receiving", ieHandler, "InternalStateChange_To_StabilizerDriverClient_ReceiveFSM_Receiving_Ready", "ManagementClient_ReceiveFSM");
 	registerNotification("Receiving_Ready", pManagementClient_ReceiveFSM->getHandler(), "InternalStateChange_To_ManagementClient_ReceiveFSM_Receiving_Ready", "StabilizerDriverClient_ReceiveFSM");
 	registerNotification("Receiving", pManagementClient_ReceiveFSM->getHandler(), "InternalStateChange_To_ManagementClient_ReceiveFSM_Receiving", "StabilizerDriverClient_ReceiveFSM");
-
+	iop::Config cfg("~StabilizerDriverClient");
 	// get the ROS parameter
 	p_names.clear();
 	p_stabilizer.clear();
 	p_efforts.clear();
 	p_positions.clear();
 	XmlRpc::XmlRpcValue v;
-	p_pnh.param("joint_names", v, v);
-	ROS_INFO_NAMED("StabilizerDriverClient", "  joint_names:");
+	cfg.param("joint_names", v, v);
 	for(unsigned int i = 0; i < v.size(); i++) {
 		p_names.push_back(v[i]);
-		ROS_INFO_NAMED("StabilizerDriverClient", "    %s", p_names[i].c_str());
 	}
 	// subscribe to ROS joint state commands
-	p_sub_jointstates = p_nh.subscribe<sensor_msgs::JointState>("cmd_joint_velocities", 1, &StabilizerDriverClient_ReceiveFSM::pRosCmdJointState, this);
-	p_sub_cmd_vel = p_nh.subscribe<std_msgs::Float64MultiArray>("flipper_velocity_controller/command", 1, &StabilizerDriverClient_ReceiveFSM::pRosCmdVelocity, this);
-	p_pub_jointstates = p_nh.advertise<sensor_msgs::JointState>("joint_states", 1, true);
+	p_sub_jointstates = cfg.subscribe<sensor_msgs::JointState>("cmd_joint_velocities", 1, &StabilizerDriverClient_ReceiveFSM::pRosCmdJointState, this);
+	p_sub_cmd_vel = cfg.subscribe<std_msgs::Float64MultiArray>("flipper_velocity_controller/command", 1, &StabilizerDriverClient_ReceiveFSM::pRosCmdVelocity, this);
+	p_pub_jointstates = cfg.advertise<sensor_msgs::JointState>("joint_states", 1, true);
 
 	// initialize the control layer, which handles the access control staff
 	Slave &slave = Slave::get_instance(*(jausRouter->getJausAddress()));
