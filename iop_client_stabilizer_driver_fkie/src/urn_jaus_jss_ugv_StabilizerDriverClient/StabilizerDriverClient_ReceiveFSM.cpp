@@ -60,6 +60,7 @@ StabilizerDriverClient_ReceiveFSM::StabilizerDriverClient_ReceiveFSM(urn_jaus_js
 	p_has_access = false;
 	p_by_query = false;
 	p_valid_capabilities = false;
+	p_hz = 1.0;
 
 }
 
@@ -77,6 +78,7 @@ void StabilizerDriverClient_ReceiveFSM::setupNotifications()
 	registerNotification("Receiving_Ready", pManagementClient_ReceiveFSM->getHandler(), "InternalStateChange_To_ManagementClient_ReceiveFSM_Receiving_Ready", "StabilizerDriverClient_ReceiveFSM");
 	registerNotification("Receiving", pManagementClient_ReceiveFSM->getHandler(), "InternalStateChange_To_ManagementClient_ReceiveFSM_Receiving", "StabilizerDriverClient_ReceiveFSM");
 	iop::Config cfg("~StabilizerDriverClient");
+	cfg.param("hz", p_hz, p_hz, false, false);
 	// get the ROS parameter
 	p_names.clear();
 	p_stabilizer.clear();
@@ -203,13 +205,15 @@ void StabilizerDriverClient_ReceiveFSM::reportStabilizerCapabilitiesAction(Repor
 	if (p_remote_addr.get() != 0) {
 		if (p_by_query) {
 			p_query_timer.stop();
-			ROS_INFO_NAMED("StabilizerDriverClient", "create QUERY timer to get stabilizer position from %d.%d.%d",
-					p_remote_addr.getSubsystemID(), p_remote_addr.getNodeID(), p_remote_addr.getComponentID());
-			p_query_timer = p_nh.createTimer(ros::Duration(0.1), &StabilizerDriverClient_ReceiveFSM::pQueryCallback, this);
+			if (p_hz > 0) {
+				ROS_INFO_NAMED("StabilizerDriverClient", "create QUERY timer to get stabilizer position from %s", component.str().c_str());
+				p_query_timer = p_nh.createTimer(ros::Duration(1.0 / p_hz), &StabilizerDriverClient_ReceiveFSM::pQueryCallback, this);
+			} else {
+				ROS_WARN_NAMED("StabilizerDriverClient", "invalid hz %f.2f for QUERY timer to get stabilizer position from %s", p_hz, component.str().c_str());
+			}
 		} else {
-			ROS_INFO_NAMED("StabilizerDriverClient", "create EVENT to get stabilizer position from %d.%d.%d",
-					p_remote_addr.getSubsystemID(), p_remote_addr.getNodeID(), p_remote_addr.getComponentID());
-			pEventsClient_ReceiveFSM->create_event(*this, p_remote_addr, p_query_position, 10.0, 0);
+			ROS_INFO_NAMED("StabilizerDriverClient", "create EVENT to get stabilizer position from %s", component.str().c_str());
+			pEventsClient_ReceiveFSM->create_event(*this, p_remote_addr, p_query_position, p_hz);
 		}
 	}
 }
