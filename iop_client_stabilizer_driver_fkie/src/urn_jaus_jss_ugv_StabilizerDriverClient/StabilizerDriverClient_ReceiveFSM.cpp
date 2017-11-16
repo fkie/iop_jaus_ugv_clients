@@ -206,13 +206,13 @@ void StabilizerDriverClient_ReceiveFSM::reportStabilizerCapabilitiesAction(Repor
 		if (p_by_query) {
 			p_query_timer.stop();
 			if (p_hz > 0) {
-				ROS_INFO_NAMED("StabilizerDriverClient", "create QUERY timer to get stabilizer position from %s", component.str().c_str());
+				ROS_INFO_NAMED("StabilizerDriverClient", "create QUERY timer to get stabilizer position from %s", p_remote_addr.str().c_str());
 				p_query_timer = p_nh.createTimer(ros::Duration(1.0 / p_hz), &StabilizerDriverClient_ReceiveFSM::pQueryCallback, this);
 			} else {
-				ROS_WARN_NAMED("StabilizerDriverClient", "invalid hz %f.2f for QUERY timer to get stabilizer position from %s", p_hz, component.str().c_str());
+				ROS_WARN_NAMED("StabilizerDriverClient", "invalid hz %.2f for QUERY timer to get stabilizer position from %s", p_hz, p_remote_addr.str().c_str());
 			}
 		} else {
-			ROS_INFO_NAMED("StabilizerDriverClient", "create EVENT to get stabilizer position from %s", component.str().c_str());
+			ROS_INFO_NAMED("StabilizerDriverClient", "create EVENT to get stabilizer position from %s", p_remote_addr.str().c_str());
 			pEventsClient_ReceiveFSM->create_event(*this, p_remote_addr, p_query_position, p_hz);
 		}
 	}

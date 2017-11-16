@@ -106,7 +106,7 @@ protected:
 	std::map<unsigned char, float> p_positions;
 	bool p_by_query;
 	bool p_valid_capabilities;
-	int p_hz;
+	double p_hz;
 
 	void pRosCmdJointState(const sensor_msgs::JointState::ConstPtr& joint_state);
 	void pRosCmdVelocity(const std_msgs::Float64MultiArray::ConstPtr& cmd_vel);
