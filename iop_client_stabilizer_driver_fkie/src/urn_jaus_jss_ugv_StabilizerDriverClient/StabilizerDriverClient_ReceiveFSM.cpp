@@ -90,7 +90,7 @@ void StabilizerDriverClient_ReceiveFSM::setupNotifications()
 		p_names.push_back(v[i]);
 	}
 	// subscribe to ROS joint state commands
-	p_sub_jointstates = cfg.subscribe<sensor_msgs::JointState>("cmd_joint_velocities", 1, &StabilizerDriverClient_ReceiveFSM::pRosCmdJointState, this);
+	p_sub_jointstates = cfg.subscribe<sensor_msgs::JointState>("cmd_joint_states", 1, &StabilizerDriverClient_ReceiveFSM::pRosCmdJointState, this);
 	p_sub_cmd_vel = cfg.subscribe<std_msgs::Float64MultiArray>("flipper_velocity_controller/command", 1, &StabilizerDriverClient_ReceiveFSM::pRosCmdVelocity, this);
 	p_pub_jointstates = cfg.advertise<sensor_msgs::JointState>("joint_states", 1, true);
 
