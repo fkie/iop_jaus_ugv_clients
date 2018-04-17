@@ -1,0 +1,10 @@
+<library path="libiop_client_illumination_fkie">
+  <class name="IlluminationClient" type="iop::IlluminationClientPlugin" base_class_type="iop::PluginInterface">
+    <description>
+      Illumination client Service Plugin, used e.g. by OCU
+    </description>
+    <iop_service name="IlluminationClient" id="urn:jaus:jss:ugv:IlluminationServiceClient" version="1.1">
+      <inherits_from id="urn:jaus:jss:core:AccessControlClient" min_version="1.1"/>
+    </iop_service>
+  </class>
+</library>
