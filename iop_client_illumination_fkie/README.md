@@ -32,7 +32,7 @@ _hz (int_ Default: 0.0)
 
 #### Publisher:
 
-_illuminator/`key` (std_msgs::Byte)_
+_illuminator/`key` (std_msgs::Bool)_
 
 > State for supported light.
 
@@ -43,7 +43,7 @@ _illuminator_states (diagnostic_msgs/DiagnosticStatus)_
 
 #### Subscriber:
 
-_illuminator/cmd_`key` (std_msgs::Byte)_
+_illuminator/cmd_`key` (std_msgs::Bool)_
 
 > Command for supported light.
 

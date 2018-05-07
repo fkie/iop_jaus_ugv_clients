@@ -17,7 +17,7 @@
 #include "urn_jaus_jss_core_EventsClient/EventsClient_ReceiveFSM.h"
 #include "urn_jaus_jss_core_AccessControlClient/AccessControlClient_ReceiveFSM.h"
 
-#include <std_msgs/Byte.h>
+#include <std_msgs/Bool.h>
 #include <iop_ocu_slavelib_fkie/SlaveHandlerInterface.h>
 #include <iop_events_fkie/EventHandlerInterface.h>
 #include <iop_client_illumination_fkie/IlluminatorClientList.h>

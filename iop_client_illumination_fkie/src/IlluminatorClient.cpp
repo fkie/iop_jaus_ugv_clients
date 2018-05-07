@@ -88,8 +88,8 @@ IlluminatorClient::IlluminatorClient(bool supported, std::string iop_key)
 			p_iop_key = iop_key;
 			p_ros_key = get_ros_key(iop_key);
 			iop::Config cfg("~IlluminationClient");
-			p_sub_cmd = cfg.subscribe<std_msgs::Byte>(std::string("illuminator/cmd_") + p_ros_key, 10, &IlluminatorClient::p_ros_cmd_callback, this);
-			p_pub_state = cfg.advertise<std_msgs::Byte>(std::string("illuminator/") + p_ros_key, 10, true);
+			p_sub_cmd = cfg.subscribe<std_msgs::Bool>(std::string("illuminator/cmd_") + p_ros_key, 10, &IlluminatorClient::p_ros_cmd_callback, this);
+			p_pub_state = cfg.advertise<std_msgs::Bool>(std::string("illuminator/") + p_ros_key, 10, true);
 		} catch (std::exception &e) {
 			p_supported = false;
 			ROS_WARN_NAMED("IlluminationClient", "init of illumination '%s' failed: %s", iop_key.c_str(), e.what());
@@ -114,8 +114,8 @@ void IlluminatorClient::init(std::string ros_key, bool state, std::string diagno
 		p_ros_key = ros_key;
 		p_diagnostic_key = diagnostic_key;
 		iop::Config cfg("~IlluminationClient");
-		p_sub_cmd = cfg.subscribe<std_msgs::Byte>(std::string("illuminator/cmd_") + p_ros_key, 10, &IlluminatorClient::p_ros_cmd_callback, this);
-		p_pub_state = cfg.advertise<std_msgs::Byte>(std::string("illuminator/") + p_ros_key, 10, true);
+		p_sub_cmd = cfg.subscribe<std_msgs::Bool>(std::string("illuminator/cmd_") + p_ros_key, 10, &IlluminatorClient::p_ros_cmd_callback, this);
+		p_pub_state = cfg.advertise<std_msgs::Bool>(std::string("illuminator/") + p_ros_key, 10, true);
 		p_supported = true;
 	} catch (std::exception &e) {
 		ROS_WARN_NAMED("IlluminationClient", "init of illumination '%s' failed: %s", ros_key.c_str(), e.what());
@@ -144,7 +144,7 @@ bool IlluminatorClient::set_state(bool state)
 		result = true;
 		if (p_state != state || !p_state_published) {
 			p_state = state;
-			std_msgs::Byte msg;
+			std_msgs::Bool msg;
 			msg.data = state;
 			p_pub_state.publish(msg);
 			if (p_state) {
@@ -186,7 +186,7 @@ bool IlluminatorClient::operator!=(IlluminatorClient &value)
 	return !(*this == value);
 }
 
-void IlluminatorClient::p_ros_cmd_callback(const std_msgs::Byte::ConstPtr& state)
+void IlluminatorClient::p_ros_cmd_callback(const std_msgs::Bool::ConstPtr& state)
 {
 	if (!p_cmd_callback.empty() && is_supported()) {
 		bool new_state = state->data;

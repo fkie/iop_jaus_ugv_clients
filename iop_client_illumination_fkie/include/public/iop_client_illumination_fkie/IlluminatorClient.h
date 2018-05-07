@@ -28,7 +28,7 @@ along with this program; or you can read the full license at
 #include <boost/bind.hpp>
 #include <boost/function.hpp>
 #include <ros/ros.h>
-#include <std_msgs/Byte.h>
+#include <std_msgs/Bool.h>
 
 namespace iop
 {
@@ -75,7 +75,7 @@ protected:
 	ros::Publisher p_pub_state;
 	boost::function<void (std::string iop_key, bool state)> p_cmd_callback;
 
-	void p_ros_cmd_callback(const std_msgs::Byte::ConstPtr& state);
+	void p_ros_cmd_callback(const std_msgs::Bool::ConstPtr& state);
 
 };
 
