@@ -69,7 +69,6 @@ protected:
 	std::string p_diagnostic_key;
 	bool p_supported;
 	bool p_state;
-	bool p_state_published;
 	std::string p_state_str;
 	ros::Subscriber p_sub_cmd;
 	ros::Publisher p_pub_state;

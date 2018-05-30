@@ -75,7 +75,6 @@ IlluminatorClient::IlluminatorClient(){
 	p_supported = false;
 	p_state = false;
 	p_state_str = "OFF";
-	p_state_published = false;
 }
 
 IlluminatorClient::IlluminatorClient(bool supported, std::string iop_key)
@@ -142,17 +141,14 @@ bool IlluminatorClient::set_state(bool state)
 	bool result = false;
 	if (is_supported()) {
 		result = true;
-		if (p_state != state || !p_state_published) {
-			p_state = state;
-			std_msgs::Bool msg;
-			msg.data = state;
-			p_pub_state.publish(msg);
-			if (p_state) {
-				p_state_str = "ON";
-			} else {
-				p_state_str = "OFF";
-			}
-			p_state_published = true;
+		p_state = state;
+		std_msgs::Bool msg;
+		msg.data = state;
+		p_pub_state.publish(msg);
+		if (p_state) {
+			p_state_str = "ON";
+		} else {
+			p_state_str = "OFF";
 		}
 	}
 	return result;
@@ -189,16 +185,12 @@ bool IlluminatorClient::operator!=(IlluminatorClient &value)
 void IlluminatorClient::p_ros_cmd_callback(const std_msgs::Bool::ConstPtr& state)
 {
 	if (!p_cmd_callback.empty() && is_supported()) {
-		bool new_state = state->data;
-		if (p_state != new_state) {
-			p_state = new_state;
-			p_state_published = false;
-			p_cmd_callback(p_iop_key, state->data);
-			if (p_state) {
-				p_state_str = "ON";
-			} else {
-				p_state_str = "OFF";
-			}
+		p_state = state->data;
+		p_cmd_callback(p_iop_key, p_state);
+		if (p_state) {
+			p_state_str = "ON";
+		} else {
+			p_state_str = "OFF";
 		}
 	}
 }
