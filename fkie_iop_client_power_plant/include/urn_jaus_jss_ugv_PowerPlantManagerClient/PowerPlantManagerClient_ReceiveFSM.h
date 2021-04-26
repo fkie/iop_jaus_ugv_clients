@@ -79,7 +79,6 @@ protected:
 	int p_battery_id;
 	rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr p_pub_battery_voltage;
 	rclcpp::Publisher<std_msgs::msg::Int8>::SharedPtr p_pub_battery_capacity_percent;
-	void pQueryCallback();
 
 };
 
