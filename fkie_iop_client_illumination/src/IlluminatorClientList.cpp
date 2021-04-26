@@ -166,7 +166,7 @@ urn_jaus_jss_ugv_IlluminationServiceClient::SetIlluminationState IlluminatorClie
 	return cmd;
 }
 
-void IlluminatorClientList::p_illuminator_cmd_callback(std::string iop_key, bool state)
+void IlluminatorClientList::p_illuminator_cmd_callback(std::string /*iop_key*/, bool /*state*/)
 {
 	lock_type lock(p_mutex);
 	if (p_cmd_callback) {

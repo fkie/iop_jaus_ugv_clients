@@ -73,11 +73,10 @@ public:
 	void event(JausAddress reporter, unsigned short query_msg_id, unsigned int reportlen, const unsigned char* reportdata);
 
 	/// SlaveHandlerInterface Methods
-	void control_allowed(std::string service_uri, JausAddress component, unsigned char authority);
-	void enable_monitoring_only(std::string service_uri, JausAddress component);
-	void access_deactivated(std::string service_uri, JausAddress component);
-	void create_events(std::string service_uri, JausAddress component, bool by_query=false);
-	void cancel_events(std::string service_uri, JausAddress component, bool by_query=false);
+	void register_events(JausAddress remote_addr, double hz);
+	void unregister_events(JausAddress remote_addr);
+	void send_query(JausAddress remote_addr);
+	void stop_query(JausAddress remote_addr);
 	/// Guard Methods
 
 	StabilizerDriverClient_ReceiveFSMContext *context;
@@ -93,9 +92,6 @@ protected:
 	std::shared_ptr<iop::Component> cmp;
 	rclcpp::Logger logger;
 
-	JausAddress p_remote_addr;
-	bool p_has_access;
-	iop::Timer p_query_timer;
 	rclcpp::Subscription<sensor_msgs::msg::JointState>::SharedPtr p_sub_jointstates;
 	rclcpp::Subscription<std_msgs::msg::Float64MultiArray>::SharedPtr p_sub_cmd_vel;
 	rclcpp::Publisher<sensor_msgs::msg::JointState>::SharedPtr p_pub_jointstates;
@@ -105,14 +101,13 @@ protected:
 	std::map<unsigned char, std::string> p_stabilizer;
 	std::map<unsigned char, float> p_efforts;
 	std::map<unsigned char, float> p_positions;
-	bool p_by_query;
+	//bool p_by_query;
 	bool p_valid_capabilities;
 	double p_hz;
 
 	void pRosCmdJointState(const sensor_msgs::msg::JointState::SharedPtr joint_state);
 	void pRosCmdVelocity(const std_msgs::msg::Float64MultiArray::SharedPtr cmd_vel);
 	int getNameIndexFromJointState(const sensor_msgs::msg::JointState::SharedPtr joint_state, std::string name);
-	void pQueryCallback();
 
 };
 

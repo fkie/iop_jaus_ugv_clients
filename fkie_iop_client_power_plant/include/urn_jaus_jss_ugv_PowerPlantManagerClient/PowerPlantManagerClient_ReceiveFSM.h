@@ -50,11 +50,10 @@ public:
 	void event(JausAddress reporter, unsigned short query_msg_id, unsigned int reportlen, const unsigned char* reportdata);
 
 	/// SlaveHandlerInterface Methods
-	void control_allowed(std::string service_uri, JausAddress component, unsigned char authority);
-	void enable_monitoring_only(std::string service_uri, JausAddress component);
-	void access_deactivated(std::string service_uri, JausAddress component);
-	void create_events(std::string service_uri, JausAddress component, bool by_query=false);
-	void cancel_events(std::string service_uri, JausAddress component, bool by_query=false);
+	void register_events(JausAddress remote_addr, double hz);
+	void unregister_events(JausAddress remote_addr);
+	void send_query(JausAddress remote_addr);
+	void stop_query(JausAddress remote_addr);
 
 	/// Guard Methods
 
@@ -73,10 +72,6 @@ protected:
 	rclcpp::Logger logger;
 
 	QueryPowerPlantStatus p_query_states;
-	JausAddress p_remote_addr;
-	bool p_has_access;
-	iop::Timer p_query_timer;
-	bool p_by_query;
 	bool p_valid_configuration;
 	double p_hz;
 
