@@ -20,18 +20,19 @@ along with this program; or you can read the full license at
 
 /** \author Alexander Tiderko */
 
-#include <diagnostic_msgs/KeyValue.h>
+#include <diagnostic_msgs/msg/key_value.hpp>
 #include <fkie_iop_client_illumination/IlluminatorClientList.h>
-#include <fkie_iop_component/iop_config.h>
+#include <fkie_iop_component/iop_config.hpp>
 
 using namespace iop;
 
 
-IlluminatorClientList::IlluminatorClientList()
+IlluminatorClientList::IlluminatorClientList(std::shared_ptr<iop::Component> cmp)
 {
+	this->cmp = cmp;
 	p_initialized = false;
-	iop::Config cfg("~IlluminationClient");
-	p_pub_diagnostic = cfg.advertise<diagnostic_msgs::DiagnosticStatus>(std::string("illuminator_states"), 10, true);
+	iop::Config cfg(cmp, "IlluminationClient");
+	p_pub_diagnostic = cfg.create_publisher<diagnostic_msgs::msg::DiagnosticStatus>(std::string("illuminator_states"), 10);
 }
 
 IlluminatorClientList::~IlluminatorClientList()
@@ -44,52 +45,52 @@ void IlluminatorClientList::apply_configuration_report(urn_jaus_jss_ugv_Illumina
 	lock_type lock(p_mutex);
 	p_clear_map();
 	bool supported = config.getBody()->getIlluminatorTypes()->getTypes()->getHeadlights() > 0;
-	p_illuminator_map["Headlights"] = new IlluminatorClient(supported, "Headlights");
+	p_illuminator_map["Headlights"] = new IlluminatorClient(cmp, supported, "Headlights");
 	p_illuminator_map["Headlights"]->set_cmd_callback(&IlluminatorClientList::p_illuminator_cmd_callback, this);
 	supported = config.getBody()->getIlluminatorTypes()->getTypes()->getLeftTurnSignal() > 0;
-	p_illuminator_map["LeftTurnSignal"]= new IlluminatorClient(supported, "LeftTurnSignal");
+	p_illuminator_map["LeftTurnSignal"]= new IlluminatorClient(cmp, supported, "LeftTurnSignal");
 	p_illuminator_map["LeftTurnSignal"]->set_cmd_callback(&IlluminatorClientList::p_illuminator_cmd_callback, this);
 	supported = config.getBody()->getIlluminatorTypes()->getTypes()->getRightTurnSignal() > 0;
-	p_illuminator_map["RightTurnSignal"] = new IlluminatorClient(supported, "RightTurnSignal");
+	p_illuminator_map["RightTurnSignal"] = new IlluminatorClient(cmp, supported, "RightTurnSignal");
 	p_illuminator_map["RightTurnSignal"]->set_cmd_callback(&IlluminatorClientList::p_illuminator_cmd_callback, this);
 	supported = config.getBody()->getIlluminatorTypes()->getTypes()->getRunningLights() > 0;
-	p_illuminator_map["RunningLights"] = new IlluminatorClient(supported, "RunningLights");
+	p_illuminator_map["RunningLights"] = new IlluminatorClient(cmp, supported, "RunningLights");
 	p_illuminator_map["RunningLights"]->set_cmd_callback(&IlluminatorClientList::p_illuminator_cmd_callback, this);
 	supported = config.getBody()->getIlluminatorTypes()->getTypes()->getBrakeLights() > 0;
-	p_illuminator_map["BrakeLights"] = new IlluminatorClient(supported, "BrakeLights");
+	p_illuminator_map["BrakeLights"] = new IlluminatorClient(cmp, supported, "BrakeLights");
 	p_illuminator_map["BrakeLights"]->set_cmd_callback(&IlluminatorClientList::p_illuminator_cmd_callback, this);
 	supported = config.getBody()->getIlluminatorTypes()->getTypes()->getBackupLights() > 0;
-	p_illuminator_map["BackupLights"] = new IlluminatorClient(supported, "BackupLights");
+	p_illuminator_map["BackupLights"] = new IlluminatorClient(cmp, supported, "BackupLights");
 	p_illuminator_map["BackupLights"]->set_cmd_callback(&IlluminatorClientList::p_illuminator_cmd_callback, this);
 	supported = config.getBody()->getIlluminatorTypes()->getTypes()->getVisibleLightSource() > 0;
-	p_illuminator_map["VisibleLightSource"] = new IlluminatorClient(supported, "VisibleLightSource");
+	p_illuminator_map["VisibleLightSource"] = new IlluminatorClient(cmp, supported, "VisibleLightSource");
 	p_illuminator_map["VisibleLightSource"]->set_cmd_callback(&IlluminatorClientList::p_illuminator_cmd_callback, this);
 	supported = config.getBody()->getIlluminatorTypes()->getTypes()->getIRLightSource() > 0;
-	p_illuminator_map["IRLightSource"] = new IlluminatorClient(supported, "IRLightSource");
+	p_illuminator_map["IRLightSource"] = new IlluminatorClient(cmp, supported, "IRLightSource");
 	p_illuminator_map["IRLightSource"]->set_cmd_callback(&IlluminatorClientList::p_illuminator_cmd_callback, this);
 	supported = config.getBody()->getIlluminatorTypes()->getTypes()->getVariableLight1() > 0;
-	p_illuminator_map["VariableLight1"] = new IlluminatorClient(supported, "VariableLight1");
+	p_illuminator_map["VariableLight1"] = new IlluminatorClient(cmp, supported, "VariableLight1");
 	p_illuminator_map["VariableLight1"]->set_cmd_callback(&IlluminatorClientList::p_illuminator_cmd_callback, this);
 	supported = config.getBody()->getIlluminatorTypes()->getTypes()->getVariableLight2() > 0;
-	p_illuminator_map["VariableLight2"] = new IlluminatorClient(supported, "VariableLight2");
+	p_illuminator_map["VariableLight2"] = new IlluminatorClient(cmp, supported, "VariableLight2");
 	p_illuminator_map["VariableLight2"]->set_cmd_callback(&IlluminatorClientList::p_illuminator_cmd_callback, this);
 	supported = config.getBody()->getIlluminatorTypes()->getTypes()->getVariableLight3() > 0;
-	p_illuminator_map["VariableLight3"] = new IlluminatorClient(supported, "VariableLight3");
+	p_illuminator_map["VariableLight3"] = new IlluminatorClient(cmp, supported, "VariableLight3");
 	p_illuminator_map["VariableLight3"]->set_cmd_callback(&IlluminatorClientList::p_illuminator_cmd_callback, this);
 	supported = config.getBody()->getIlluminatorTypes()->getTypes()->getVariableLight4() > 0;
-	p_illuminator_map["VariableLight4"] = new IlluminatorClient(supported, "VariableLight4");
+	p_illuminator_map["VariableLight4"] = new IlluminatorClient(cmp, supported, "VariableLight4");
 	p_illuminator_map["VariableLight4"]->set_cmd_callback(&IlluminatorClientList::p_illuminator_cmd_callback, this);
 	supported = config.getBody()->getIlluminatorTypes()->getTypes()->getHighBeams() > 0;
-	p_illuminator_map["HighBeams"] = new IlluminatorClient(supported, "HighBeams");
+	p_illuminator_map["HighBeams"] = new IlluminatorClient(cmp, supported, "HighBeams");
 	p_illuminator_map["HighBeams"]->set_cmd_callback(&IlluminatorClientList::p_illuminator_cmd_callback, this);
 	supported = config.getBody()->getIlluminatorTypes()->getTypes()->getParkingLights() > 0;
-	p_illuminator_map["ParkingLights"] = new IlluminatorClient(supported, "ParkingLights");
+	p_illuminator_map["ParkingLights"] = new IlluminatorClient(cmp, supported, "ParkingLights");
 	p_illuminator_map["ParkingLights"]->set_cmd_callback(&IlluminatorClientList::p_illuminator_cmd_callback, this);
 	supported = config.getBody()->getIlluminatorTypes()->getTypes()->getFogLights() > 0;
-	p_illuminator_map["FogLights"] = new IlluminatorClient(supported, "FogLights");
+	p_illuminator_map["FogLights"] = new IlluminatorClient(cmp, supported, "FogLights");
 	p_illuminator_map["FogLights"]->set_cmd_callback(&IlluminatorClientList::p_illuminator_cmd_callback, this);
 	supported = config.getBody()->getIlluminatorTypes()->getTypes()->getHazardLights() > 0;
-	p_illuminator_map["HazardLights"] = new IlluminatorClient(supported, "HazardLights");
+	p_illuminator_map["HazardLights"] = new IlluminatorClient(cmp, supported, "HazardLights");
 	p_illuminator_map["HazardLights"]->set_cmd_callback(&IlluminatorClientList::p_illuminator_cmd_callback, this);
 	p_initialized = true;
 }
@@ -125,18 +126,18 @@ void IlluminatorClientList::apply_state_report(urn_jaus_jss_ugv_IlluminationServ
 		p_illuminator_map["ParkingLights"]->set_state(state.getParkingLights());
 		p_illuminator_map["FogLights"]->set_state(state.getFogLights());
 		p_illuminator_map["HazardLights"]->set_state(state.getHazardLights());
-		diagnostic_msgs::DiagnosticStatus ros_msg;
-		ros_msg.level = diagnostic_msgs::DiagnosticStatus::OK;
+		auto ros_msg = diagnostic_msgs::msg::DiagnosticStatus();
+		ros_msg.level = diagnostic_msgs::msg::DiagnosticStatus::OK;
 		std::map<std::string, iop::IlluminatorClient*>::iterator it;
 		for (it = p_illuminator_map.begin(); it != p_illuminator_map.end(); ++it) {
 			if (it->second->is_supported()) {
-				diagnostic_msgs::KeyValue entry;
+				auto entry = diagnostic_msgs::msg::KeyValue();
 				entry.key = it->second->get_ros_key();
 				entry.value = it->second->get_state_str();
 				ros_msg.values.push_back(entry);
 			}
 		}
-		p_pub_diagnostic.publish(ros_msg);
+		p_pub_diagnostic->publish(ros_msg);
 	}
 }
 
@@ -168,7 +169,7 @@ urn_jaus_jss_ugv_IlluminationServiceClient::SetIlluminationState IlluminatorClie
 void IlluminatorClientList::p_illuminator_cmd_callback(std::string iop_key, bool state)
 {
 	lock_type lock(p_mutex);
-	if (!p_cmd_callback.empty()) {
+	if (p_cmd_callback) {
 		p_cmd_callback(get_state_cmd());
 	}
 }

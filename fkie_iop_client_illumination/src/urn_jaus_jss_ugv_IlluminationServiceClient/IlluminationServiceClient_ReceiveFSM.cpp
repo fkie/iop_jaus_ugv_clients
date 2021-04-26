@@ -1,9 +1,8 @@
 
 
 #include "urn_jaus_jss_ugv_IlluminationServiceClient/IlluminationServiceClient_ReceiveFSM.h"
-
+#include <fkie_iop_component/iop_config.hpp>
 #include <fkie_iop_ocu_slavelib/Slave.h>
-#include <fkie_iop_component/iop_config.h>
 
 
 
@@ -15,7 +14,10 @@ namespace urn_jaus_jss_ugv_IlluminationServiceClient
 
 
 
-IlluminationServiceClient_ReceiveFSM::IlluminationServiceClient_ReceiveFSM(urn_jaus_jss_core_Transport::Transport_ReceiveFSM* pTransport_ReceiveFSM, urn_jaus_jss_core_EventsClient::EventsClient_ReceiveFSM* pEventsClient_ReceiveFSM, urn_jaus_jss_core_AccessControlClient::AccessControlClient_ReceiveFSM* pAccessControlClient_ReceiveFSM)
+IlluminationServiceClient_ReceiveFSM::IlluminationServiceClient_ReceiveFSM(std::shared_ptr<iop::Component> cmp, urn_jaus_jss_core_AccessControlClient::AccessControlClient_ReceiveFSM* pAccessControlClient_ReceiveFSM, urn_jaus_jss_core_EventsClient::EventsClient_ReceiveFSM* pEventsClient_ReceiveFSM, urn_jaus_jss_core_Transport::Transport_ReceiveFSM* pTransport_ReceiveFSM)
+: logger(cmp->get_logger().get_child("IlluminationServiceClient")),
+  p_query_timer(std::chrono::milliseconds(100), std::bind(&IlluminationServiceClient_ReceiveFSM::pQueryCallback, this), false),
+  p_illuminator_list(cmp)
 {
 
 	/*
@@ -25,9 +27,10 @@ IlluminationServiceClient_ReceiveFSM::IlluminationServiceClient_ReceiveFSM(urn_j
 	 */
 	context = new IlluminationServiceClient_ReceiveFSMContext(*this);
 
-	this->pTransport_ReceiveFSM = pTransport_ReceiveFSM;
-	this->pEventsClient_ReceiveFSM = pEventsClient_ReceiveFSM;
 	this->pAccessControlClient_ReceiveFSM = pAccessControlClient_ReceiveFSM;
+	this->pEventsClient_ReceiveFSM = pEventsClient_ReceiveFSM;
+	this->pTransport_ReceiveFSM = pTransport_ReceiveFSM;
+	this->cmp = cmp;
 	p_has_access = false;
 	p_by_query = false;
 	p_valid_configuration = false;
@@ -47,12 +50,22 @@ void IlluminationServiceClient_ReceiveFSM::setupNotifications()
 	pAccessControlClient_ReceiveFSM->registerNotification("Receiving", ieHandler, "InternalStateChange_To_IlluminationServiceClient_ReceiveFSM_Receiving_Ready", "AccessControlClient_ReceiveFSM");
 	registerNotification("Receiving_Ready", pAccessControlClient_ReceiveFSM->getHandler(), "InternalStateChange_To_AccessControlClient_ReceiveFSM_Receiving_Ready", "IlluminationServiceClient_ReceiveFSM");
 	registerNotification("Receiving", pAccessControlClient_ReceiveFSM->getHandler(), "InternalStateChange_To_AccessControlClient_ReceiveFSM_Receiving", "IlluminationServiceClient_ReceiveFSM");
-	iop::Config cfg("~IlluminationClient");
-	cfg.param("hz", p_hz, p_hz, false, false);
+
+}
+
+
+void IlluminationServiceClient_ReceiveFSM::setupIopConfiguration()
+{
+	iop::Config cfg(cmp, "IlluminationServiceClient");
+	cfg.declare_param<double>("hz", p_hz, true,
+		rcl_interfaces::msg::ParameterType::PARAMETER_DOUBLE,
+		"Sets how often the reports are requested. If use_queries is True hz must be greather then 0. In this case each time a Query message is sent to get a report. If use_queries is False an event is created to get Reports. In this case 0 disables the rate and an event of type on_change will be created.",
+		"Default: 0.0");
+	cfg.param("hz", p_hz, p_hz, false);
 
 	// initialize the control layer, which handles the access control staff
-	Slave &slave = Slave::get_instance(*(jausRouter->getJausAddress()));
-	slave.add_supported_service(*this, "urn:jaus:jss:ugv:IlluminationService", 1, 1);
+	auto slave = Slave::get_instance(cmp);
+	slave->add_supported_service(*this, "urn:jaus:jss:ugv:IlluminationService", 1, 1);
 	p_illuminator_list.set_cmd_callback(&IlluminationServiceClient_ReceiveFSM::p_cmd_callback, this);
 }
 
@@ -65,13 +78,14 @@ void IlluminationServiceClient_ReceiveFSM::handleReportIlluminationConfiguration
 	if (p_remote_addr.get() != 0) {
 		if (p_by_query) {
 			if (p_hz > 0) {
-				ROS_INFO_NAMED("IlluminationClient", "create QUERY timer to get illumination states from %s", p_remote_addr.str().c_str());
-				p_query_timer = p_nh.createTimer(ros::Duration(1.0 / p_hz), &IlluminationServiceClient_ReceiveFSM::pQueryCallback, this);
+				RCLCPP_INFO(logger, "create QUERY timer to get illumination states from %s", p_remote_addr.str().c_str());
+				p_query_timer.set_rate(p_hz);
+				p_query_timer.start();
 			} else {
-				ROS_WARN_NAMED("IlluminationClient", "invalid hz %.2f for QUERY timer to get illumination states from %s", p_hz, p_remote_addr.str().c_str());
+				RCLCPP_WARN(logger, "invalid hz %.2f for QUERY timer to get illumination states from %s", p_hz, p_remote_addr.str().c_str());
 			}
 		} else {
-			ROS_INFO_NAMED("IlluminationClient", "create EVENT to get illumination states from %s", p_remote_addr.str().c_str());
+			RCLCPP_INFO(logger, "create EVENT to get illumination states from %s", p_remote_addr.str().c_str());
 			pEventsClient_ReceiveFSM->create_event(*this, p_remote_addr, p_query_states, p_hz);
 		}
 	}
@@ -79,7 +93,7 @@ void IlluminationServiceClient_ReceiveFSM::handleReportIlluminationConfiguration
 
 void IlluminationServiceClient_ReceiveFSM::handleReportIlluminationStateAction(ReportIlluminationState msg, Receive::Body::ReceiveRec transportData)
 {
-	ROS_DEBUG_NAMED("IlluminationClient", "apply illumination states from %s", transportData.getAddress().str().c_str());
+	RCLCPP_DEBUG(logger, "apply illumination states from %s", transportData.getAddress().str().c_str());
 	p_illuminator_list.apply_state_report(msg);
 }
 
@@ -89,7 +103,7 @@ void IlluminationServiceClient_ReceiveFSM::control_allowed(std::string service_u
 		p_remote_addr = component;
 		p_has_access = true;
 	} else {
-		ROS_WARN_STREAM("[IlluminationClient] unexpected control allowed for " << service_uri << " received, ignored!");
+		RCLCPP_WARN(logger, "unexpected control allowed for %s received, ignored!", service_uri.c_str());
 	}
 }
 
@@ -107,21 +121,22 @@ void IlluminationServiceClient_ReceiveFSM::access_deactivated(std::string servic
 void IlluminationServiceClient_ReceiveFSM::create_events(std::string service_uri, JausAddress component, bool by_query)
 {
 	p_by_query = by_query;
-	p_query_timer = p_nh.createTimer(ros::Duration(1), &IlluminationServiceClient_ReceiveFSM::pQueryCallback, this);
+	p_query_timer.set_rate(1);
+	p_query_timer.start();
 }
 
 void IlluminationServiceClient_ReceiveFSM::cancel_events(std::string service_uri, JausAddress component, bool by_query)
 {
 	p_query_timer.stop();
 	if (!by_query) {
-		ROS_INFO_NAMED("IlluminationClient", "cancel EVENT for illumination state by %s", component.str().c_str());
+		RCLCPP_INFO(logger, "cancel EVENT for illumination state by %s", component.str().c_str());
 		pEventsClient_ReceiveFSM->cancel_event(*this, component, p_query_states);
 	}
 	p_valid_configuration = false;
 	p_illuminator_list.apply_configuration_report(ReportIlluminationConfiguration());
 }
 
-void IlluminationServiceClient_ReceiveFSM::pQueryCallback(const ros::TimerEvent& event)
+void IlluminationServiceClient_ReceiveFSM::pQueryCallback()
 {
 	if (p_remote_addr.get() != 0) {
 		if (!p_valid_configuration) {
@@ -151,4 +166,4 @@ void IlluminationServiceClient_ReceiveFSM::p_cmd_callback(SetIlluminationState c
 	}
 }
 
-};
+}

@@ -25,10 +25,9 @@ along with this program; or you can read the full license at
 #define ILLUMINATOR_H
 
 
-#include <boost/bind.hpp>
-#include <boost/function.hpp>
-#include <ros/ros.h>
-#include <std_msgs/Bool.h>
+#include <rclcpp/rclcpp.hpp>
+#include <std_msgs/msg/bool.hpp>
+#include <fkie_iop_component/iop_component.hpp>
 
 namespace iop
 {
@@ -40,15 +39,14 @@ public:
 	static std::string get_ros_key(std::string iop_key);
 
 	IlluminatorClient();
-	IlluminatorClient(bool supported, std::string iop_key);
+	IlluminatorClient(std::shared_ptr<iop::Component> cmp, bool supported, std::string iop_key);
 	~IlluminatorClient();
 
-	void init(std::string ros_key, std::string state, std::string diagnostic_key="");
-	void init(std::string ros_key, bool state, std::string diagnostic_key="");
+	void init(std::shared_ptr<iop::Component> cmp, std::string ros_key, std::string state, std::string diagnostic_key="");
+	void init(std::shared_ptr<iop::Component> cmp, std::string ros_key, bool state, std::string diagnostic_key="");
 	template<class T>
 	void set_cmd_callback(void(T::*handler)(std::string iop_key, bool state), T*obj) {
-		p_cmd_callback = boost::bind(handler, obj, _1, _2);
-		std::cout << "set callback" << p_cmd_callback << ", " << !p_cmd_callback.empty() << std::endl;
+		p_cmd_callback = std::bind(handler, obj, std::placeholders::_1, std::placeholders::_2);
 	}
 	void set_state_callback();
 	bool is_valid();
@@ -64,20 +62,21 @@ public:
 protected:
 	static std::map<std::string, std::string> p_iop_ros_map;
 	static std::map<std::string, std::string> p_ros_iop_map;
+	std::shared_ptr<iop::Component> cmp;
 	std::string p_ros_key;
 	std::string p_iop_key;
 	std::string p_diagnostic_key;
 	bool p_supported;
 	bool p_state;
 	std::string p_state_str;
-	ros::Subscriber p_sub_cmd;
-	ros::Publisher p_pub_state;
-	boost::function<void (std::string iop_key, bool state)> p_cmd_callback;
+	rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr p_sub_cmd;
+	rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr p_pub_state;
+	std::function<void (std::string iop_key, bool state)> p_cmd_callback;
 
-	void p_ros_cmd_callback(const std_msgs::Bool::ConstPtr& state);
-
-};
+	void p_ros_cmd_callback(const std_msgs::msg::Bool::SharedPtr state);
 
 };
+
+}
 
 #endif

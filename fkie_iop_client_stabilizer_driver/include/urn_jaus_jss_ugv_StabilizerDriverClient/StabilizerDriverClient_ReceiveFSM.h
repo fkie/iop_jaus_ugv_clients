@@ -40,14 +40,12 @@ along with this program; or you can read the full license at
 
 
 #include "StabilizerDriverClient_ReceiveFSM_sm.h"
-
-#include <boost/bind.hpp>
-#include <boost/function.hpp>
+#include <rclcpp/rclcpp.hpp>
+#include <fkie_iop_component/iop_component.hpp>
 #include <vector>
 #include <map>
-#include <ros/ros.h>
-#include <sensor_msgs/JointState.h>
-#include <std_msgs/Float64MultiArray.h>
+#include <sensor_msgs/msg/joint_state.hpp>
+#include <std_msgs/msg/float64_multi_array.hpp>
 
 #include <fkie_iop_ocu_slavelib/SlaveHandlerInterface.h>
 #include <fkie_iop_events/EventHandlerInterface.h>
@@ -59,11 +57,12 @@ namespace urn_jaus_jss_ugv_StabilizerDriverClient
 class DllExport StabilizerDriverClient_ReceiveFSM : public JTS::StateMachine, public iop::ocu::SlaveHandlerInterface, public iop::EventHandlerInterface
 {
 public:
-	StabilizerDriverClient_ReceiveFSM(urn_jaus_jss_core_Transport::Transport_ReceiveFSM* pTransport_ReceiveFSM, urn_jaus_jss_core_EventsClient::EventsClient_ReceiveFSM* pEventsClient_ReceiveFSM, urn_jaus_jss_core_AccessControlClient::AccessControlClient_ReceiveFSM* pAccessControlClient_ReceiveFSM, urn_jaus_jss_core_ManagementClient::ManagementClient_ReceiveFSM* pManagementClient_ReceiveFSM);
+	StabilizerDriverClient_ReceiveFSM(std::shared_ptr<iop::Component> cmp, urn_jaus_jss_core_ManagementClient::ManagementClient_ReceiveFSM* pManagementClient_ReceiveFSM, urn_jaus_jss_core_AccessControlClient::AccessControlClient_ReceiveFSM* pAccessControlClient_ReceiveFSM, urn_jaus_jss_core_EventsClient::EventsClient_ReceiveFSM* pEventsClient_ReceiveFSM, urn_jaus_jss_core_Transport::Transport_ReceiveFSM* pTransport_ReceiveFSM);
 	virtual ~StabilizerDriverClient_ReceiveFSM();
 
 	/// Handle notifications on parent state changes
 	virtual void setupNotifications();
+	virtual void setupIopConfiguration();
 
 	/// Action Methods
 	virtual void reportStabilizerCapabilitiesAction(ReportStabilizerCapabilities msg, Receive::Body::ReceiveRec transportData);
@@ -85,19 +84,21 @@ public:
 
 protected:
 
-    /// References to parent FSMs
-	urn_jaus_jss_core_Transport::Transport_ReceiveFSM* pTransport_ReceiveFSM;
-	urn_jaus_jss_core_EventsClient::EventsClient_ReceiveFSM* pEventsClient_ReceiveFSM;
-	urn_jaus_jss_core_AccessControlClient::AccessControlClient_ReceiveFSM* pAccessControlClient_ReceiveFSM;
+	/// References to parent FSMs
 	urn_jaus_jss_core_ManagementClient::ManagementClient_ReceiveFSM* pManagementClient_ReceiveFSM;
+	urn_jaus_jss_core_AccessControlClient::AccessControlClient_ReceiveFSM* pAccessControlClient_ReceiveFSM;
+	urn_jaus_jss_core_EventsClient::EventsClient_ReceiveFSM* pEventsClient_ReceiveFSM;
+	urn_jaus_jss_core_Transport::Transport_ReceiveFSM* pTransport_ReceiveFSM;
+
+	std::shared_ptr<iop::Component> cmp;
+	rclcpp::Logger logger;
 
 	JausAddress p_remote_addr;
 	bool p_has_access;
-	ros::NodeHandle p_nh;
-	ros::Timer p_query_timer;
-	ros::Subscriber p_sub_jointstates;
-	ros::Subscriber p_sub_cmd_vel;
-	ros::Publisher p_pub_jointstates;
+	iop::Timer p_query_timer;
+	rclcpp::Subscription<sensor_msgs::msg::JointState>::SharedPtr p_sub_jointstates;
+	rclcpp::Subscription<std_msgs::msg::Float64MultiArray>::SharedPtr p_sub_cmd_vel;
+	rclcpp::Publisher<sensor_msgs::msg::JointState>::SharedPtr p_pub_jointstates;
 	QueryStabilizerPosition p_query_position;
 	QueryStabilizerEffort p_query_effort;
 	std::vector<std::string> p_names;
@@ -108,13 +109,13 @@ protected:
 	bool p_valid_capabilities;
 	double p_hz;
 
-	void pRosCmdJointState(const sensor_msgs::JointState::ConstPtr& joint_state);
-	void pRosCmdVelocity(const std_msgs::Float64MultiArray::ConstPtr& cmd_vel);
-	int getNameIndexFromJointState(const sensor_msgs::JointState::ConstPtr& joint_state, std::string name);
-	void pQueryCallback(const ros::TimerEvent& event);
+	void pRosCmdJointState(const sensor_msgs::msg::JointState::SharedPtr joint_state);
+	void pRosCmdVelocity(const std_msgs::msg::Float64MultiArray::SharedPtr cmd_vel);
+	int getNameIndexFromJointState(const sensor_msgs::msg::JointState::SharedPtr joint_state, std::string name);
+	void pQueryCallback();
 
 };
 
-};
+}
 
 #endif // STABILIZERDRIVERCLIENT_RECEIVEFSM_H

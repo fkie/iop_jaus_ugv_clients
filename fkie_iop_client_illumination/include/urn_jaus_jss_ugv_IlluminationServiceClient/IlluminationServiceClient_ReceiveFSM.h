@@ -17,12 +17,13 @@
 #include "urn_jaus_jss_core_EventsClient/EventsClient_ReceiveFSM.h"
 #include "urn_jaus_jss_core_AccessControlClient/AccessControlClient_ReceiveFSM.h"
 
-#include <std_msgs/Bool.h>
+#include "IlluminationServiceClient_ReceiveFSM_sm.h"
+#include <rclcpp/rclcpp.hpp>
+#include <fkie_iop_component/iop_component.hpp>
+#include <std_msgs/msg/bool.hpp>
 #include <fkie_iop_ocu_slavelib/SlaveHandlerInterface.h>
 #include <fkie_iop_events/EventHandlerInterface.h>
 #include <fkie_iop_client_illumination/IlluminatorClientList.h>
-
-#include "IlluminationServiceClient_ReceiveFSM_sm.h"
 
 namespace urn_jaus_jss_ugv_IlluminationServiceClient
 {
@@ -30,11 +31,12 @@ namespace urn_jaus_jss_ugv_IlluminationServiceClient
 class DllExport IlluminationServiceClient_ReceiveFSM : public JTS::StateMachine, public iop::ocu::SlaveHandlerInterface, public iop::EventHandlerInterface
 {
 public:
-	IlluminationServiceClient_ReceiveFSM(urn_jaus_jss_core_Transport::Transport_ReceiveFSM* pTransport_ReceiveFSM, urn_jaus_jss_core_EventsClient::EventsClient_ReceiveFSM* pEventsClient_ReceiveFSM, urn_jaus_jss_core_AccessControlClient::AccessControlClient_ReceiveFSM* pAccessControlClient_ReceiveFSM);
+	IlluminationServiceClient_ReceiveFSM(std::shared_ptr<iop::Component> cmp, urn_jaus_jss_core_AccessControlClient::AccessControlClient_ReceiveFSM* pAccessControlClient_ReceiveFSM, urn_jaus_jss_core_EventsClient::EventsClient_ReceiveFSM* pEventsClient_ReceiveFSM, urn_jaus_jss_core_Transport::Transport_ReceiveFSM* pTransport_ReceiveFSM);
 	virtual ~IlluminationServiceClient_ReceiveFSM();
 
 	/// Handle notifications on parent state changes
 	virtual void setupNotifications();
+	virtual void setupIopConfiguration();
 
 	/// Action Methods
 	virtual void handleReportIlluminationConfigurationAction(ReportIlluminationConfiguration msg, Receive::Body::ReceiveRec transportData);
@@ -59,26 +61,28 @@ public:
 
 protected:
 
-    /// References to parent FSMs
-	urn_jaus_jss_core_Transport::Transport_ReceiveFSM* pTransport_ReceiveFSM;
-	urn_jaus_jss_core_EventsClient::EventsClient_ReceiveFSM* pEventsClient_ReceiveFSM;
+	/// References to parent FSMs
 	urn_jaus_jss_core_AccessControlClient::AccessControlClient_ReceiveFSM* pAccessControlClient_ReceiveFSM;
+	urn_jaus_jss_core_EventsClient::EventsClient_ReceiveFSM* pEventsClient_ReceiveFSM;
+	urn_jaus_jss_core_Transport::Transport_ReceiveFSM* pTransport_ReceiveFSM;
+
+	std::shared_ptr<iop::Component> cmp;
+	rclcpp::Logger logger;
 
 	iop::IlluminatorClientList p_illuminator_list;
 	QueryIlluminationState p_query_states;
 	JausAddress p_remote_addr;
 	bool p_has_access;
-	ros::NodeHandle p_nh;
-	ros::Timer p_query_timer;
+	iop::Timer p_query_timer;
 	bool p_by_query;
 	bool p_valid_configuration;
 	double p_hz;
 
-	void pQueryCallback(const ros::TimerEvent& event);
+	void pQueryCallback();
 	void p_cmd_callback(SetIlluminationState cmd);
 
 };
 
-};
+}
 
 #endif // ILLUMINATIONSERVICECLIENT_RECEIVEFSM_H

@@ -20,15 +20,11 @@ along with this program; or you can read the full license at
 
 /** \author Alexander Tiderko */
 
-#include <fkie_iop_ocu_slavelib/Slave.h>
-#include <fkie_iop_component/iop_config.h>
-
 #include "urn_jaus_jss_ugv_StabilizerDriverClient/StabilizerDriverClient_ReceiveFSM.h"
-
-#include <ros/console.h>
+#include <fkie_iop_component/iop_config.hpp>
+#include <fkie_iop_ocu_slavelib/Slave.h>
 #include <JausUtils.h>
 #include <algorithm> // for std::find
-#include <boost/algorithm/string.hpp>
 #include <iterator>
 #include <stdlib.h>
 #include <string>     // std::string, std::stoi
@@ -43,7 +39,9 @@ namespace urn_jaus_jss_ugv_StabilizerDriverClient
 
 
 
-StabilizerDriverClient_ReceiveFSM::StabilizerDriverClient_ReceiveFSM(urn_jaus_jss_core_Transport::Transport_ReceiveFSM* pTransport_ReceiveFSM, urn_jaus_jss_core_EventsClient::EventsClient_ReceiveFSM* pEventsClient_ReceiveFSM, urn_jaus_jss_core_AccessControlClient::AccessControlClient_ReceiveFSM* pAccessControlClient_ReceiveFSM, urn_jaus_jss_core_ManagementClient::ManagementClient_ReceiveFSM* pManagementClient_ReceiveFSM)
+StabilizerDriverClient_ReceiveFSM::StabilizerDriverClient_ReceiveFSM(std::shared_ptr<iop::Component> cmp, urn_jaus_jss_core_ManagementClient::ManagementClient_ReceiveFSM* pManagementClient_ReceiveFSM, urn_jaus_jss_core_AccessControlClient::AccessControlClient_ReceiveFSM* pAccessControlClient_ReceiveFSM, urn_jaus_jss_core_EventsClient::EventsClient_ReceiveFSM* pEventsClient_ReceiveFSM, urn_jaus_jss_core_Transport::Transport_ReceiveFSM* pTransport_ReceiveFSM)
+: logger(cmp->get_logger().get_child("StabilizerDriverClient")),
+  p_query_timer(std::chrono::milliseconds(1000), std::bind(&StabilizerDriverClient_ReceiveFSM::pQueryCallback, this), false)
 {
 
 	/*
@@ -53,10 +51,11 @@ StabilizerDriverClient_ReceiveFSM::StabilizerDriverClient_ReceiveFSM(urn_jaus_js
 	 */
 	context = new StabilizerDriverClient_ReceiveFSMContext(*this);
 
-	this->pTransport_ReceiveFSM = pTransport_ReceiveFSM;
-	this->pEventsClient_ReceiveFSM = pEventsClient_ReceiveFSM;
-	this->pAccessControlClient_ReceiveFSM = pAccessControlClient_ReceiveFSM;
 	this->pManagementClient_ReceiveFSM = pManagementClient_ReceiveFSM;
+	this->pAccessControlClient_ReceiveFSM = pAccessControlClient_ReceiveFSM;
+	this->pEventsClient_ReceiveFSM = pEventsClient_ReceiveFSM;
+	this->pTransport_ReceiveFSM = pTransport_ReceiveFSM;
+	this->cmp = cmp;
 	p_has_access = false;
 	p_by_query = false;
 	p_valid_capabilities = false;
@@ -77,26 +76,36 @@ void StabilizerDriverClient_ReceiveFSM::setupNotifications()
 	pManagementClient_ReceiveFSM->registerNotification("Receiving", ieHandler, "InternalStateChange_To_StabilizerDriverClient_ReceiveFSM_Receiving_Ready", "ManagementClient_ReceiveFSM");
 	registerNotification("Receiving_Ready", pManagementClient_ReceiveFSM->getHandler(), "InternalStateChange_To_ManagementClient_ReceiveFSM_Receiving_Ready", "StabilizerDriverClient_ReceiveFSM");
 	registerNotification("Receiving", pManagementClient_ReceiveFSM->getHandler(), "InternalStateChange_To_ManagementClient_ReceiveFSM_Receiving", "StabilizerDriverClient_ReceiveFSM");
-	iop::Config cfg("~StabilizerDriverClient");
-	cfg.param("hz", p_hz, p_hz, false, false);
+
+}
+
+
+void StabilizerDriverClient_ReceiveFSM::setupIopConfiguration()
+{
+	iop::Config cfg(cmp, "StabilizerDriverClient");
 	// get the ROS parameter
 	p_names.clear();
 	p_stabilizer.clear();
 	p_efforts.clear();
 	p_positions.clear();
-	XmlRpc::XmlRpcValue v;
-	cfg.param("joint_names", v, v);
-	for(unsigned int i = 0; i < v.size(); i++) {
-		p_names.push_back(v[i]);
-	}
+	cfg.declare_param<std::vector<std::string> >("joint_names", p_names, false,
+		rcl_interfaces::msg::ParameterType::PARAMETER_STRING_ARRAY,
+		"Specifies a list with joint names. This is important to get the position of flipper. If no names are specified they will be generated from reported capabilities from the robot.",
+		"Default: []");
+	cfg.declare_param<double>("hz", p_hz, true,
+		rcl_interfaces::msg::ParameterType::PARAMETER_DOUBLE,
+		"Sets how often the reports are requested. If use_queries is True hz must be greather then 0. In this case each time a Query message is sent to get a report. If use_queries is False an event is created to get Reports. In this case 0 disables the rate and an event of type on_change will be created.",
+		"Default: 1.0");
+	cfg.param_vector<std::vector<std::string> >("joint_names", p_names, p_names);
+	cfg.param("hz", p_hz, p_hz, false);
 	// subscribe to ROS joint state commands
-	p_sub_jointstates = cfg.subscribe<sensor_msgs::JointState>("cmd_joint_states", 1, &StabilizerDriverClient_ReceiveFSM::pRosCmdJointState, this);
-	p_sub_cmd_vel = cfg.subscribe<std_msgs::Float64MultiArray>("flipper_velocity_controller/command", 1, &StabilizerDriverClient_ReceiveFSM::pRosCmdVelocity, this);
-	p_pub_jointstates = cfg.advertise<sensor_msgs::JointState>("joint_states", 1, true);
+	p_sub_jointstates = cfg.create_subscription<sensor_msgs::msg::JointState>("cmd_joint_states", 1, std::bind(&StabilizerDriverClient_ReceiveFSM::pRosCmdJointState, this, std::placeholders::_1));
+	p_sub_cmd_vel = cfg.create_subscription<std_msgs::msg::Float64MultiArray>("flipper_velocity_controller/command", 1, std::bind(&StabilizerDriverClient_ReceiveFSM::pRosCmdVelocity, this, std::placeholders::_1));
+	p_pub_jointstates = cfg.create_publisher<sensor_msgs::msg::JointState>("joint_states", 1);
 
 	// initialize the control layer, which handles the access control staff
-	Slave &slave = Slave::get_instance(*(jausRouter->getJausAddress()));
-	slave.add_supported_service(*this, "urn:jaus:jss:ugv:StabilizerDriver", 1, 0);
+	auto slave = Slave::get_instance(cmp);
+	slave->add_supported_service(*this, "urn:jaus:jss:ugv:StabilizerDriver", 1, 0);
 }
 
 void StabilizerDriverClient_ReceiveFSM::control_allowed(std::string service_uri, JausAddress component, unsigned char authority)
@@ -105,7 +114,7 @@ void StabilizerDriverClient_ReceiveFSM::control_allowed(std::string service_uri,
 		p_remote_addr = component;
 		p_has_access = true;
 	} else {
-		ROS_WARN_STREAM("[StabilizerDriverClient] unexpected control allowed for " << service_uri << " received, ignored!");
+		RCLCPP_WARN(logger, "unexpected control allowed for %s received, ignored!", service_uri.c_str());
 	}
 }
 
@@ -124,14 +133,15 @@ void StabilizerDriverClient_ReceiveFSM::create_events(std::string service_uri, J
 {
 	p_by_query = by_query;
 	p_valid_capabilities = false;
-	p_query_timer = p_nh.createTimer(ros::Duration(1), &StabilizerDriverClient_ReceiveFSM::pQueryCallback, this);
+	p_query_timer.set_rate(1.0);
+	p_query_timer.start();
 }
 
 void StabilizerDriverClient_ReceiveFSM::cancel_events(std::string service_uri, JausAddress component, bool by_query)
 {
 	p_query_timer.stop();
 	if (!by_query) {
-		ROS_INFO_NAMED("StabilizerDriverClient", "cancel EVENT for stabilizer position by %d.%d.%d",
+		RCLCPP_INFO(logger, "cancel EVENT for stabilizer position by %d.%d.%d",
 				component.getSubsystemID(), component.getNodeID(), component.getComponentID());
 		pEventsClient_ReceiveFSM->cancel_event(*this, component, p_query_position);
 	}
@@ -141,7 +151,7 @@ void StabilizerDriverClient_ReceiveFSM::cancel_events(std::string service_uri, J
 	p_positions.clear();
 }
 
-void StabilizerDriverClient_ReceiveFSM::pQueryCallback(const ros::TimerEvent& event)
+void StabilizerDriverClient_ReceiveFSM::pQueryCallback()
 {
 	if (p_remote_addr.get() != 0) {
 		if (!p_valid_capabilities) {
@@ -160,7 +170,7 @@ void StabilizerDriverClient_ReceiveFSM::reportStabilizerCapabilitiesAction(Repor
 	uint8_t node_id = transportData.getSrcNodeID();
 	uint8_t component_id = transportData.getSrcComponentID();
 	JausAddress sender(subsystem_id, node_id, component_id);
-	ROS_DEBUG_NAMED("StabilizerDriverClient", "reportStabilizerCapabilitiesAction from %d.%d.%d",
+	RCLCPP_DEBUG(logger, "reportStabilizerCapabilitiesAction from %d.%d.%d",
 					subsystem_id, node_id, component_id);
 	ReportStabilizerCapabilities::Body::StabilizerCapabilities *caplist = msg.getBody()->getStabilizerCapabilities();
 	//  ROS_INFO("Manipulator Specification has %d joints", jointlist->getNumberOfElements()+1);
@@ -184,15 +194,15 @@ void StabilizerDriverClient_ReceiveFSM::reportStabilizerCapabilitiesAction(Repor
 		//    ROS_INFO("  add %s joint", sstm.str().c_str());
 	}
 	// publish the current state of the manipulator
-	sensor_msgs::JointState rosmsg;
-	rosmsg.header.stamp = ros::Time::now();
+	auto rosmsg = sensor_msgs::msg::JointState();
+	rosmsg.header.stamp = cmp->now();
 	std::map<unsigned char, std::string>::iterator st_it;
 	for (st_it = p_stabilizer.begin(); st_it != p_stabilizer.end(); ++st_it) {
 		rosmsg.name.push_back(st_it->second);
 		rosmsg.velocity.push_back(0.);
 		rosmsg.position.push_back(0.);
 	}
-	p_pub_jointstates.publish(rosmsg);
+	p_pub_jointstates->publish(rosmsg);
 	p_valid_capabilities = true;
 	// create a new query message with all id
 	p_query_position = QueryStabilizerPosition();
@@ -206,13 +216,14 @@ void StabilizerDriverClient_ReceiveFSM::reportStabilizerCapabilitiesAction(Repor
 		if (p_by_query) {
 			p_query_timer.stop();
 			if (p_hz > 0) {
-				ROS_INFO_NAMED("StabilizerDriverClient", "create QUERY timer to get stabilizer position from %s", p_remote_addr.str().c_str());
-				p_query_timer = p_nh.createTimer(ros::Duration(1.0 / p_hz), &StabilizerDriverClient_ReceiveFSM::pQueryCallback, this);
+				RCLCPP_INFO(logger, "create QUERY timer to get stabilizer position from %s", p_remote_addr.str().c_str());
+				p_query_timer.set_rate(p_hz);
+				p_query_timer.start();
 			} else {
-				ROS_WARN_NAMED("StabilizerDriverClient", "invalid hz %.2f for QUERY timer to get stabilizer position from %s", p_hz, p_remote_addr.str().c_str());
+				RCLCPP_WARN(logger, "invalid hz %.2f for QUERY timer to get stabilizer position from %s", p_hz, p_remote_addr.str().c_str());
 			}
 		} else {
-			ROS_INFO_NAMED("StabilizerDriverClient", "create EVENT to get stabilizer position from %s", p_remote_addr.str().c_str());
+			RCLCPP_INFO(logger, "create EVENT to get stabilizer position from %s", p_remote_addr.str().c_str());
 			pEventsClient_ReceiveFSM->create_event(*this, p_remote_addr, p_query_position, p_hz);
 		}
 	}
@@ -225,10 +236,10 @@ void StabilizerDriverClient_ReceiveFSM::reportStabilizerEffortAction(ReportStabi
 	uint8_t node_id = transportData.getSrcNodeID();
 	uint8_t component_id = transportData.getSrcComponentID();
 	JausAddress sender(subsystem_id, node_id, component_id);
-	ROS_DEBUG_NAMED("StabilizerDriverClient", "reportStabilizerEffortAction from %d.%d.%d",
+	RCLCPP_DEBUG(logger, "reportStabilizerEffortAction from %d.%d.%d",
 					subsystem_id, node_id, component_id);
-	sensor_msgs::JointState rosmsg;
-	rosmsg.header.stamp = ros::Time::now();
+	auto rosmsg = sensor_msgs::msg::JointState();
+	rosmsg.header.stamp = cmp->now();
 	ReportStabilizerEffort::Body::StabilizerEffort *efforts = msg.getBody()->getStabilizerEffort();
 	for (unsigned int index = 0; index < efforts->getNumberOfElements(); index++) {
 		unsigned char stabilizer_id = efforts->getElement(index)->getStabilizerID();
@@ -236,7 +247,7 @@ void StabilizerDriverClient_ReceiveFSM::reportStabilizerEffortAction(ReportStabi
 		double effort = efforts->getElement(index)->getEffort();
 		rosmsg.velocity.push_back((int)(effort * 100) / 100.);
 	}
-	p_pub_jointstates.publish(rosmsg);
+	p_pub_jointstates->publish(rosmsg);
 
 }
 
@@ -246,11 +257,11 @@ void StabilizerDriverClient_ReceiveFSM::reportStabilizerPositionAction(ReportSta
 	uint8_t node_id = transportData.getSrcNodeID();
 	uint8_t component_id = transportData.getSrcComponentID();
 	JausAddress sender(subsystem_id, node_id, component_id);
-	ROS_DEBUG_NAMED("StabilizerDriverClient", "reportStabilizerPositionAction from %d.%d.%d",
+	RCLCPP_DEBUG(logger, "reportStabilizerPositionAction from %d.%d.%d",
 					subsystem_id, node_id, component_id);
 	// publish to ROS
-	sensor_msgs::JointState rosmsg;
-	rosmsg.header.stamp = ros::Time::now();
+	auto rosmsg = sensor_msgs::msg::JointState();
+	rosmsg.header.stamp = cmp->now();
 	ReportStabilizerPosition::Body::StabilizerPosition *efforts = msg.getBody()->getStabilizerPosition();
 	for (unsigned int index = 0; index < efforts->getNumberOfElements(); index++) {
 		unsigned char stabilizer_id = efforts->getElement(index)->getStabilizerID();
@@ -258,11 +269,11 @@ void StabilizerDriverClient_ReceiveFSM::reportStabilizerPositionAction(ReportSta
 		double position = efforts->getElement(index)->getPosition();
 		rosmsg.position.push_back((int)(position * 100) / 100.);
 	}
-	p_pub_jointstates.publish(rosmsg);
+	p_pub_jointstates->publish(rosmsg);
 }
 
 
-void StabilizerDriverClient_ReceiveFSM::pRosCmdJointState(const sensor_msgs::JointState::ConstPtr& joint_state)
+void StabilizerDriverClient_ReceiveFSM::pRosCmdJointState(const sensor_msgs::msg::JointState::SharedPtr joint_state)
 {
 	if (p_remote_addr.get() != 0) {
 		bool has_position = false;
@@ -299,7 +310,7 @@ void StabilizerDriverClient_ReceiveFSM::pRosCmdJointState(const sensor_msgs::Joi
 	}
 }
 
-void StabilizerDriverClient_ReceiveFSM::pRosCmdVelocity(const std_msgs::Float64MultiArray::ConstPtr& cmd_vel)
+void StabilizerDriverClient_ReceiveFSM::pRosCmdVelocity(const std_msgs::msg::Float64MultiArray::SharedPtr cmd_vel)
 {
 	if (p_remote_addr.get() != 0) {
 		SetStabilizerEffort msg;
@@ -339,18 +350,18 @@ void StabilizerDriverClient_ReceiveFSM::event(JausAddress sender, unsigned short
 	reportStabilizerPositionAction(report, transport_data);
 }
 
-int StabilizerDriverClient_ReceiveFSM::getNameIndexFromJointState(const sensor_msgs::JointState::ConstPtr& joint_state, std::string name)
+int StabilizerDriverClient_ReceiveFSM::getNameIndexFromJointState(const sensor_msgs::msg::JointState::SharedPtr joint_state, std::string name)
 {
-  int result = -1;
-  for (unsigned int index = 0; index < joint_state->name.size(); index++) {
-    if (joint_state->name[index].compare(name) == 0) {
-      result = index;
-      break;
-    }
-  }
-  return result;
+	int result = -1;
+	for (unsigned int index = 0; index < joint_state->name.size(); index++) {
+		if (joint_state->name[index].compare(name) == 0) {
+			result = index;
+			break;
+		}
+	}
+	return result;
 }
 
 
 
-};
+}
