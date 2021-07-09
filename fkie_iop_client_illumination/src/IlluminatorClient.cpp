@@ -111,6 +111,7 @@ void IlluminatorClient::init(std::shared_ptr<iop::Component> cmp, std::string ro
 	try {
 		p_iop_key = get_iop_key(ros_key);
 		p_ros_key = ros_key;
+		p_state = state;
 		p_diagnostic_key = diagnostic_key;
 		iop::Config cfg(cmp, "IlluminationClient");
 		p_sub_cmd = cfg.create_subscription<std_msgs::msg::Bool>(std::string("illuminator/cmd_") + p_ros_key, 10, std::bind(&IlluminatorClient::p_ros_cmd_callback, this, std::placeholders::_1));
