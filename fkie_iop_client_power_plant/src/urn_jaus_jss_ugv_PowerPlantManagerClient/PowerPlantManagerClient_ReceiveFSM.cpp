@@ -68,12 +68,12 @@ void PowerPlantManagerClient_ReceiveFSM::setupIopConfiguration()
 
 void PowerPlantManagerClient_ReceiveFSM::register_events(JausAddress remote_addr, double hz)
 {
-	pEventsClient_ReceiveFSM->create_event(*this, remote_addr, p_query_states, p_hz);
+	pEventsClient_ReceiveFSM->create_event(*this, remote_addr, p_query_power_plant_status, p_hz);
 }
 
 void PowerPlantManagerClient_ReceiveFSM::unregister_events(JausAddress remote_addr)
 {
-	pEventsClient_ReceiveFSM->cancel_event(*this, remote_addr, p_query_states);
+	pEventsClient_ReceiveFSM->cancel_event(*this, remote_addr, p_query_power_plant_status);
 	stop_query(remote_addr);
 }
 
@@ -83,7 +83,7 @@ void PowerPlantManagerClient_ReceiveFSM::send_query(JausAddress remote_addr)
 		QueryPowerPlantCapabilities query_cap_msg;
 		sendJausMessage(query_cap_msg, remote_addr);
 	} else {
-		sendJausMessage(p_query_states, remote_addr);
+		sendJausMessage(p_query_power_plant_status, remote_addr);
 	}
 }
 

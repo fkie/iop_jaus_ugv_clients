@@ -71,7 +71,7 @@ protected:
 	std::shared_ptr<iop::Component> cmp;
 	rclcpp::Logger logger;
 
-	QueryPowerPlantStatus p_query_states;
+	QueryPowerPlantStatus p_query_power_plant_status;
 	bool p_valid_configuration;
 	double p_hz;
 
