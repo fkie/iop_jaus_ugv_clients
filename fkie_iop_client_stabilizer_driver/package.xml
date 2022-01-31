@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <package format="3">
   <name>fkie_iop_client_stabilizer_driver</name>
-  <version>1.1.0</version>
+  <version>2.1.0</version>
   <description>
       The Stabilizer Driver Client allows control of the Stabilizer Driver service within the ROS/IOP Bridge.
   </description>
