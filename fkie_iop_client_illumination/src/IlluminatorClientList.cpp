@@ -109,7 +109,7 @@ void IlluminatorClientList::apply_state_report(urn_jaus_jss_ugv_IlluminationServ
 	lock_type lock(p_mutex);
 	urn_jaus_jss_ugv_IlluminationServiceClient::ReportIlluminationState report;
 	if (p_initialized) {
-		urn_jaus_jss_ugv_IlluminationServiceClient::ReportIlluminationState::body::illuminationRec::illumination &state = *(states.getBody()->getIlluminationRec()->getIllumination());
+		urn_jaus_jss_ugv_IlluminationServiceClient::ReportIlluminationState::Body::illuminationRec::illumination &state = *(states.getBody()->getIlluminationRec()->getIllumination());
 		p_illuminator_map["Headlights"]->set_state(state.getHeadlights());
 		p_illuminator_map["LeftTurnSignal"]->set_state(state.getLeftTurnSignal());
 		p_illuminator_map["RightTurnSignal"]->set_state(state.getRightTurnSignal());

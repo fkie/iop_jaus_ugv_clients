@@ -23,92 +23,86 @@ along with this program; or you can read the full license at
 #ifndef STABILIZERDRIVERCLIENT_RECEIVEFSM_H
 #define STABILIZERDRIVERCLIENT_RECEIVEFSM_H
 
-#include "JausUtils.h"
 #include "InternalEvents/InternalEventHandler.h"
-#include "Transport/JausTransport.h"
 #include "JTSStateMachine.h"
-#include "urn_jaus_jss_ugv_StabilizerDriverClient/Messages/MessageSet.h"
+#include "JausUtils.h"
+#include "Transport/JausTransport.h"
 #include "urn_jaus_jss_ugv_StabilizerDriverClient/InternalEvents/InternalEventsSet.h"
+#include "urn_jaus_jss_ugv_StabilizerDriverClient/Messages/MessageSet.h"
 
 #include "InternalEvents/Receive.h"
 #include "InternalEvents/Send.h"
 
-#include "urn_jaus_jss_core_Transport/Transport_ReceiveFSM.h"
-#include "urn_jaus_jss_core_EventsClient/EventsClient_ReceiveFSM.h"
 #include "urn_jaus_jss_core_AccessControlClient/AccessControlClient_ReceiveFSM.h"
+#include "urn_jaus_jss_core_EventsClient/EventsClient_ReceiveFSM.h"
 #include "urn_jaus_jss_core_ManagementClient/ManagementClient_ReceiveFSM.h"
-
+#include "urn_jaus_jss_core_Transport/Transport_ReceiveFSM.h"
 
 #include "StabilizerDriverClient_ReceiveFSM_sm.h"
-#include <rclcpp/rclcpp.hpp>
 #include <fkie_iop_component/iop_component.hpp>
-#include <vector>
 #include <map>
+#include <rclcpp/rclcpp.hpp>
 #include <sensor_msgs/msg/joint_state.hpp>
 #include <std_msgs/msg/float64_multi_array.hpp>
+#include <vector>
 
-#include <fkie_iop_ocu_slavelib/SlaveHandlerInterface.h>
 #include <fkie_iop_events/EventHandlerInterface.h>
+#include <fkie_iop_ocu_slavelib/SlaveHandlerInterface.h>
 
+namespace urn_jaus_jss_ugv_StabilizerDriverClient {
 
-namespace urn_jaus_jss_ugv_StabilizerDriverClient
-{
-
-class DllExport StabilizerDriverClient_ReceiveFSM : public JTS::StateMachine, public iop::ocu::SlaveHandlerInterface, public iop::EventHandlerInterface
-{
+class DllExport StabilizerDriverClient_ReceiveFSM : public JTS::StateMachine, public iop::ocu::SlaveHandlerInterface, public iop::EventHandlerInterface {
 public:
-	StabilizerDriverClient_ReceiveFSM(std::shared_ptr<iop::Component> cmp, urn_jaus_jss_core_ManagementClient::ManagementClient_ReceiveFSM* pManagementClient_ReceiveFSM, urn_jaus_jss_core_AccessControlClient::AccessControlClient_ReceiveFSM* pAccessControlClient_ReceiveFSM, urn_jaus_jss_core_EventsClient::EventsClient_ReceiveFSM* pEventsClient_ReceiveFSM, urn_jaus_jss_core_Transport::Transport_ReceiveFSM* pTransport_ReceiveFSM);
-	virtual ~StabilizerDriverClient_ReceiveFSM();
+    StabilizerDriverClient_ReceiveFSM(std::shared_ptr<iop::Component> cmp);
+    virtual ~StabilizerDriverClient_ReceiveFSM();
 
-	/// Handle notifications on parent state changes
-	virtual void setupNotifications();
-	virtual void setupIopConfiguration();
+    /// Handle notifications on parent state changes
+    virtual void setupNotifications();
+    virtual void setupIopConfiguration();
 
-	/// Action Methods
-	virtual void reportStabilizerCapabilitiesAction(ReportStabilizerCapabilities msg, Receive::Body::ReceiveRec transportData);
-	virtual void reportStabilizerEffortAction(ReportStabilizerEffort msg, Receive::Body::ReceiveRec transportData);
-	virtual void reportStabilizerPositionAction(ReportStabilizerPosition msg, Receive::Body::ReceiveRec transportData);
+    /// Action Methods
+    virtual void reportStabilizerCapabilitiesAction(ReportStabilizerCapabilities msg, Receive::Body::ReceiveRec transportData);
+    virtual void reportStabilizerEffortAction(ReportStabilizerEffort msg, Receive::Body::ReceiveRec transportData);
+    virtual void reportStabilizerPositionAction(ReportStabilizerPosition msg, Receive::Body::ReceiveRec transportData);
 
-	/// EventHandlerInterface Methods
-	void event(JausAddress reporter, unsigned short query_msg_id, unsigned int reportlen, const unsigned char* reportdata);
+    /// EventHandlerInterface Methods
+    void event(JausAddress reporter, unsigned short query_msg_id, unsigned int reportlen, const unsigned char* reportdata);
 
-	/// SlaveHandlerInterface Methods
-	void register_events(JausAddress remote_addr, double hz);
-	void unregister_events(JausAddress remote_addr);
-	void send_query(JausAddress remote_addr);
-	void stop_query(JausAddress remote_addr);
-	/// Guard Methods
+    /// SlaveHandlerInterface Methods
+    void register_events(JausAddress remote_addr, double hz);
+    void unregister_events(JausAddress remote_addr);
+    void send_query(JausAddress remote_addr);
+    void stop_query(JausAddress remote_addr);
+    /// Guard Methods
 
-	StabilizerDriverClient_ReceiveFSMContext *context;
+    StabilizerDriverClient_ReceiveFSMContext* context;
 
 protected:
+    /// References to parent FSMs
+    urn_jaus_jss_core_ManagementClient::ManagementClient_ReceiveFSM* pManagementClient_ReceiveFSM;
+    urn_jaus_jss_core_AccessControlClient::AccessControlClient_ReceiveFSM* pAccessControlClient_ReceiveFSM;
+    urn_jaus_jss_core_EventsClient::EventsClient_ReceiveFSM* pEventsClient_ReceiveFSM;
+    urn_jaus_jss_core_Transport::Transport_ReceiveFSM* pTransport_ReceiveFSM;
 
-	/// References to parent FSMs
-	urn_jaus_jss_core_ManagementClient::ManagementClient_ReceiveFSM* pManagementClient_ReceiveFSM;
-	urn_jaus_jss_core_AccessControlClient::AccessControlClient_ReceiveFSM* pAccessControlClient_ReceiveFSM;
-	urn_jaus_jss_core_EventsClient::EventsClient_ReceiveFSM* pEventsClient_ReceiveFSM;
-	urn_jaus_jss_core_Transport::Transport_ReceiveFSM* pTransport_ReceiveFSM;
+    std::shared_ptr<iop::Component> cmp;
+    rclcpp::Logger logger;
 
-	std::shared_ptr<iop::Component> cmp;
-	rclcpp::Logger logger;
+    rclcpp::Subscription<sensor_msgs::msg::JointState>::SharedPtr p_sub_jointstates;
+    rclcpp::Subscription<std_msgs::msg::Float64MultiArray>::SharedPtr p_sub_cmd_vel;
+    rclcpp::Publisher<sensor_msgs::msg::JointState>::SharedPtr p_pub_jointstates;
+    QueryStabilizerPosition p_query_position;
+    QueryStabilizerEffort p_query_effort;
+    std::vector<std::string> p_names;
+    std::map<unsigned char, std::string> p_stabilizer;
+    std::map<unsigned char, float> p_efforts;
+    std::map<unsigned char, float> p_positions;
+    // bool p_by_query;
+    bool p_valid_capabilities;
+    double p_hz;
 
-	rclcpp::Subscription<sensor_msgs::msg::JointState>::SharedPtr p_sub_jointstates;
-	rclcpp::Subscription<std_msgs::msg::Float64MultiArray>::SharedPtr p_sub_cmd_vel;
-	rclcpp::Publisher<sensor_msgs::msg::JointState>::SharedPtr p_pub_jointstates;
-	QueryStabilizerPosition p_query_position;
-	QueryStabilizerEffort p_query_effort;
-	std::vector<std::string> p_names;
-	std::map<unsigned char, std::string> p_stabilizer;
-	std::map<unsigned char, float> p_efforts;
-	std::map<unsigned char, float> p_positions;
-	//bool p_by_query;
-	bool p_valid_capabilities;
-	double p_hz;
-
-	void pRosCmdJointState(const sensor_msgs::msg::JointState::SharedPtr joint_state);
-	void pRosCmdVelocity(const std_msgs::msg::Float64MultiArray::SharedPtr cmd_vel);
-	int getNameIndexFromJointState(const sensor_msgs::msg::JointState::SharedPtr joint_state, std::string name);
-
+    void pRosCmdJointState(const sensor_msgs::msg::JointState::SharedPtr joint_state);
+    void pRosCmdVelocity(const std_msgs::msg::Float64MultiArray::SharedPtr cmd_vel);
+    int getNameIndexFromJointState(const sensor_msgs::msg::JointState::SharedPtr joint_state, std::string name);
 };
 
 }
