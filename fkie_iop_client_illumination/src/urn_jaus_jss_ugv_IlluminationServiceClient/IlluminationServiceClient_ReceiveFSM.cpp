@@ -45,11 +45,10 @@ void IlluminationServiceClient_ReceiveFSM::setupNotifications()
 void IlluminationServiceClient_ReceiveFSM::setupIopConfiguration()
 {
     iop::Config cfg(cmp, "IlluminationServiceClient");
-    cfg.declare_param<double>("hz", p_hz, true,
+    cfg.param<double>("hz", p_hz, p_hz, true,
         rcl_interfaces::msg::ParameterType::PARAMETER_DOUBLE,
         "Sets how often the reports are requested. If use_queries is True hz must be greather then 0. In this case each time a Query message is sent to get a report. If use_queries is False an event is created to get Reports. In this case 0 disables the rate and an event of type on_change will be created.",
         "Default: 0.0");
-    cfg.param("hz", p_hz, p_hz, false);
 
     // initialize the control layer, which handles the access control staff
     this->set_rate(p_hz);

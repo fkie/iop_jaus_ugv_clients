@@ -75,16 +75,14 @@ void StabilizerDriverClient_ReceiveFSM::setupIopConfiguration()
     p_stabilizer.clear();
     p_efforts.clear();
     p_positions.clear();
-    cfg.declare_param<std::vector<std::string>>("joint_names", p_names, false,
+    cfg.param_vector<std::vector<std::string>>("joint_names", p_names, p_names, false,
         rcl_interfaces::msg::ParameterType::PARAMETER_STRING_ARRAY,
         "Specifies a list with joint names. This is important to get the position of flipper. If no names are specified they will be generated from reported capabilities from the robot.",
         "Default: []");
-    cfg.declare_param<double>("hz", p_hz, true,
+    cfg.param<double>("hz", p_hz, p_hz, true,
         rcl_interfaces::msg::ParameterType::PARAMETER_DOUBLE,
         "Sets how often the reports are requested. If use_queries is True hz must be greather then 0. In this case each time a Query message is sent to get a report. If use_queries is False an event is created to get Reports. In this case 0 disables the rate and an event of type on_change will be created.",
         "Default: 1.0");
-    cfg.param_vector<std::vector<std::string>>("joint_names", p_names, p_names);
-    cfg.param("hz", p_hz, p_hz, false);
     // subscribe to ROS joint state commands
     p_sub_jointstates = cfg.create_subscription<sensor_msgs::msg::JointState>("cmd_joint_states", 1, std::bind(&StabilizerDriverClient_ReceiveFSM::pRosCmdJointState, this, std::placeholders::_1));
     p_sub_cmd_vel = cfg.create_subscription<std_msgs::msg::Float64MultiArray>("flipper_velocity_controller/command", 1, std::bind(&StabilizerDriverClient_ReceiveFSM::pRosCmdVelocity, this, std::placeholders::_1));
